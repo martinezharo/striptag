@@ -28,6 +28,7 @@ runs on the parsed DOM and is serialized back to a string.
   - **Code** shows the cleaned HTML, pretty-printed with Prettier.
 - **Copy** button copies the cleaned HTML source.
 - **Select all / Clear** helpers for each checkbox group.
+- **Load sample** button drops in a small messy snippet to play with.
 
 ## Requirements
 
@@ -59,8 +60,10 @@ src/
 │   ├── cleaner.ts       # core DOM cleaning logic (pure, reusable, tested)
 │   ├── cleaner.test.ts  # unit tests for the cleaning logic
 │   └── format.ts        # Prettier wrapper for the Code view
-└── pages/
-    └── index.astro      # layout, scoped styles, and client-side wiring
+├── pages/
+│   └── index.astro      # layout, scoped styles, and client-side wiring
+└── styles/
+    └── global.css       # Tailwind v4 design tokens + component classes
 ```
 
 The cleaning logic in `src/lib/cleaner.ts` is intentionally decoupled from the
