@@ -1,0 +1,560 @@
+---
+// Tag and attribute checkboxes are generated client-side from whatever the
+// pasted HTML actually contains (see the script below), so nothing is rendered
+// statically here.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>StripTag — HTML Tag & Attribute Cleaner</title>
+    <meta
+      name="description"
+      content="Clean pasted HTML in your browser: remove or keep tags and attributes. Fully client-side, no upload."
+    />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="logo">
+        <span class="mark" aria-hidden="true">&lt;<span class="slash">/</span>&gt;</span
+        >Strip<span class="wordmark">Tag</span>
+      </h1>
+      <p class="tagline">Clean HTML in your browser — nothing leaves your machine.</p>
+    </header>
+
+    <main class="grid">
+      <!-- ───────────── Left: source input ───────────── -->
+      <section class="panel input-panel">
+        <div class="panel-head">
+          <h2>Source HTML</h2>
+          <button id="load-sample" class="ghost-btn" type="button">Load sample</button>
+        </div>
+        <textarea
+          id="input"
+          class="code-area"
+          spellcheck="false"
+          placeholder="Paste your HTML here…"></textarea>
+      </section>
+
+      <!-- ───────────── Middle: controls ───────────── -->
+      <section class="panel controls-panel">
+        <div class="panel-head"><h2>Options</h2></div>
+
+        <div class="controls-scroll">
+          <!-- Mode -->
+          <fieldset class="ctrl-group">
+            <legend>Mode</legend>
+            <div class="segmented" role="radiogroup" aria-label="Cleaning mode">
+              <label class="seg">
+                <input type="radio" name="mode" value="blacklist" checked />
+                <span>Blacklist</span>
+              </label>
+              <label class="seg">
+                <input type="radio" name="mode" value="whitelist" />
+                <span>Whitelist</span>
+              </label>
+            </div>
+            <p id="mode-caption" class="caption">Removing the selected tags &amp; attributes.</p>
+          </fieldset>
+
+          <!-- Removed-tag behaviour -->
+          <fieldset class="ctrl-group">
+            <legend>When a tag is removed</legend>
+            <div class="segmented" role="radiogroup" aria-label="Tag removal behaviour">
+              <label class="seg">
+                <input type="radio" name="removal" value="unwrap" checked />
+                <span>Unwrap</span>
+              </label>
+              <label class="seg">
+                <input type="radio" name="removal" value="remove" />
+                <span>Remove contents</span>
+              </label>
+            </div>
+            <p class="caption">Unwrap keeps inner content; Remove deletes the whole element.</p>
+          </fieldset>
+
+          <!-- Comments -->
+          <fieldset class="ctrl-group">
+            <legend>Comments</legend>
+            <label class="check">
+              <input type="checkbox" id="keep-comments" />
+              <span>Keep HTML comments</span>
+            </label>
+            <p class="caption">
+              <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code> and
+              <code>&lt;noscript&gt;</code> are always removed with their contents.
+            </p>
+          </fieldset>
+
+          <!-- Tags (auto-detected from the pasted HTML) -->
+          <fieldset class="ctrl-group">
+            <legend>Tags found</legend>
+            <div class="group-actions">
+              <button class="ghost-btn" type="button" data-all="tags">Select all</button>
+              <button class="ghost-btn" type="button" data-clear="tags">Clear</button>
+            </div>
+            <div class="checkbox-grid" id="tag-grid"></div>
+          </fieldset>
+
+          <!-- Attributes (auto-detected from the pasted HTML) -->
+          <fieldset class="ctrl-group">
+            <legend>Attributes found</legend>
+            <div class="group-actions">
+              <button class="ghost-btn" type="button" data-all="attrs">Select all</button>
+              <button class="ghost-btn" type="button" data-clear="attrs">Clear</button>
+            </div>
+            <div class="checkbox-grid" id="attr-grid"></div>
+          </fieldset>
+        </div>
+      </section>
+
+      <!-- ───────────── Right: output ───────────── -->
+      <section class="panel output-panel">
+        <div class="panel-head">
+          <div class="segmented small" role="radiogroup" aria-label="Output view">
+            <label class="seg">
+              <input type="radio" name="view" value="preview" checked />
+              <span>Preview</span>
+            </label>
+            <label class="seg">
+              <input type="radio" name="view" value="code" />
+              <span>Code</span>
+            </label>
+          </div>
+          <button id="copy-btn" class="primary-btn" type="button">Copy</button>
+        </div>
+
+        <div class="output-body">
+          <iframe
+            id="preview"
+            class="preview-frame"
+            sandbox=""
+            title="Cleaned HTML preview"></iframe>
+          <pre id="code-view" class="code-area code-out" hidden><code></code></pre>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      import { cleanHtml, defaultOptions, extractTagsAndAttrs, type CleanOptions } from '../lib/cleaner';
+      import { formatHtml } from '../lib/format';
+
+      // ── Element handles ────────────────────────────────────────────────
+      const $ = <T extends Element = HTMLElement>(sel: string) =>
+        document.querySelector(sel) as T;
+
+      const input = $<HTMLTextAreaElement>('#input');
+      const keepComments = $<HTMLInputElement>('#keep-comments');
+      const modeCaption = $('#mode-caption');
+      const tagGrid = $('#tag-grid');
+      const attrGrid = $('#attr-grid');
+      const preview = $<HTMLIFrameElement>('#preview');
+      const codeView = $<HTMLPreElement>('#code-view');
+      const codeEl = codeView.querySelector('code') as HTMLElement;
+      const copyBtn = $<HTMLButtonElement>('#copy-btn');
+
+      const radioValue = (name: string) =>
+        ($(`input[name="${name}"]:checked`) as HTMLInputElement).value;
+
+      // ── Selection state (kept in memory so it survives re-detection) ────
+      // A name stays selected even if it briefly disappears from the input.
+      const selectedTags = new Set<string>();
+      const selectedAttrs = new Set<string>();
+      // Currently-detected lists, for the Select all / Clear helpers.
+      let detectedTags: string[] = [];
+      let detectedAttrs: string[] = [];
+
+      // ── Build a checkbox grid from a detected list ─────────────────────
+      function buildGrid(container: Element, items: string[], set: Set<string>) {
+        container.replaceChildren();
+        if (items.length === 0) {
+          const empty = document.createElement('p');
+          empty.className = 'empty';
+          empty.textContent = 'Nothing detected yet.';
+          container.append(empty);
+          return;
+        }
+        for (const item of items) {
+          const label = document.createElement('label');
+          label.className = 'check';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = item;
+          cb.checked = set.has(item);
+          cb.addEventListener('change', () => {
+            if (cb.checked) set.add(item);
+            else set.delete(item);
+            applyAndOutput();
+          });
+          const span = document.createElement('span');
+          span.textContent = item;
+          label.append(cb, span);
+          container.append(label);
+        }
+      }
+
+      // ── Re-detect tags/attrs from the input, rebuilding grids on change ─
+      let lastTagKey = '';
+      let lastAttrKey = '';
+      function refreshDetected() {
+        const { tags, attrs } = extractTagsAndAttrs(input.value);
+        const tagKey = tags.join(',');
+        const attrKey = attrs.join(',');
+        if (tagKey !== lastTagKey) {
+          detectedTags = tags;
+          buildGrid(tagGrid, tags, selectedTags);
+          lastTagKey = tagKey;
+        }
+        if (attrKey !== lastAttrKey) {
+          detectedAttrs = attrs;
+          buildGrid(attrGrid, attrs, selectedAttrs);
+          lastAttrKey = attrKey;
+        }
+      }
+
+      // ── Clean + render output ──────────────────────────────────────────
+      let lastCode = '';
+      let formatSeq = 0; // guards against out-of-order async formatting
+
+      function readOptions(): CleanOptions {
+        const opts = defaultOptions();
+        opts.mode = radioValue('mode') as CleanOptions['mode'];
+        opts.tagRemoval = radioValue('removal') as CleanOptions['tagRemoval'];
+        opts.keepComments = keepComments.checked;
+        opts.tags = new Set(selectedTags);
+        opts.attrs = new Set(selectedAttrs);
+        return opts;
+      }
+
+      async function applyAndOutput() {
+        lastCode = cleanHtml(input.value, readOptions());
+
+        // Preview is sandboxed (empty sandbox attr → no script execution).
+        preview.srcdoc = lastCode;
+
+        // Code view: pretty-print asynchronously, ignoring stale results.
+        const seq = ++formatSeq;
+        const pretty = await formatHtml(lastCode);
+        if (seq === formatSeq) codeEl.textContent = pretty;
+      }
+
+      // Full pass: re-detect controls, then clean. Used on input changes.
+      function render() {
+        refreshDetected();
+        applyAndOutput();
+      }
+
+      function updateModeCaption() {
+        modeCaption.textContent =
+          radioValue('mode') === 'blacklist'
+            ? 'Removing the selected tags & attributes.'
+            : 'Keeping only the selected tags & attributes.';
+      }
+
+      // ── Debounced input, immediate everything-else ─────────────────────
+      let debounceId: number | undefined;
+      input.addEventListener('input', () => {
+        window.clearTimeout(debounceId);
+        debounceId = window.setTimeout(render, 250);
+      });
+
+      keepComments.addEventListener('change', applyAndOutput);
+      document.querySelectorAll('input[name="removal"]').forEach((el) =>
+        el.addEventListener('change', applyAndOutput),
+      );
+      document.querySelectorAll('input[name="mode"]').forEach((el) =>
+        el.addEventListener('change', () => {
+          updateModeCaption();
+          applyAndOutput();
+        }),
+      );
+
+      // ── View toggle (Preview / Code) ───────────────────────────────────
+      document.querySelectorAll<HTMLInputElement>('input[name="view"]').forEach((el) =>
+        el.addEventListener('change', () => {
+          const code = radioValue('view') === 'code';
+          codeView.hidden = !code;
+          preview.hidden = code;
+        }),
+      );
+
+      // ── Select all / Clear helpers (act on currently-detected items) ───
+      function setGroup(group: string, on: boolean) {
+        const [items, set, grid] =
+          group === 'tags'
+            ? ([detectedTags, selectedTags, tagGrid] as const)
+            : ([detectedAttrs, selectedAttrs, attrGrid] as const);
+        for (const item of items) {
+          if (on) set.add(item);
+          else set.delete(item);
+        }
+        buildGrid(grid, items, set);
+        applyAndOutput();
+      }
+      document.querySelectorAll<HTMLButtonElement>('[data-all]').forEach((btn) =>
+        btn.addEventListener('click', () => setGroup(btn.dataset.all!, true)),
+      );
+      document.querySelectorAll<HTMLButtonElement>('[data-clear]').forEach((btn) =>
+        btn.addEventListener('click', () => setGroup(btn.dataset.clear!, false)),
+      );
+
+      // ── Copy (copies the code string, not the rendered DOM) ────────────
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(lastCode);
+          const original = copyBtn.textContent;
+          copyBtn.textContent = 'Copied!';
+          copyBtn.classList.add('ok');
+          window.setTimeout(() => {
+            copyBtn.textContent = original;
+            copyBtn.classList.remove('ok');
+          }, 1200);
+        } catch {
+          copyBtn.textContent = 'Copy failed';
+          window.setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
+        }
+      });
+
+      // ── Sample loader + initial paint ──────────────────────────────────
+      // Split the closing script tag so it can't terminate this inline block.
+      const SAMPLE = `<div class="wrapper" id="main" data-track="x">
+  <!-- promo banner -->
+  <h1 style="color:red">Hello <span class="hl">world</span></h1>
+  <p onclick="alert(1)">Some <b>bold</b> and <i>italic</i> text.</p>
+  <a href="https://example.com" target="_blank" class="link">link</a>
+  <scr` + `ipt>console.log('nope')</scr` + `ipt>
+</div>`;
+
+      $<HTMLButtonElement>('#load-sample').addEventListener('click', () => {
+        input.value = SAMPLE;
+        render();
+      });
+
+      updateModeCaption();
+      render();
+    </script>
+
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --panel-2: #1d212b;
+        --border: #2a2f3a;
+        --text: #e6e9ef;
+        --muted: #9aa3b2;
+        --accent: #5b8cff;
+        --accent-2: #3a6df0;
+        --ok: #34c759;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+        --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { height: 100%; }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .topbar {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .logo { font-size: 20px; margin: 0; letter-spacing: -0.02em; }
+      .logo .wordmark { color: var(--accent); }
+
+      /* The </> brand mark; chevrons stay solid, the middle slash teases. */
+      .logo .mark {
+        font-family: var(--mono);
+        font-weight: 700;
+        color: var(--accent);
+        margin-right: 9px;
+      }
+      .logo .slash {
+        display: inline-block;
+        transform-origin: 50% 55%;
+        animation: tease 1.8s ease-in-out infinite;
+      }
+
+      /* A teasing peel-away: the slash fades, leans and shrinks, then returns. */
+      @keyframes tease {
+        0%,
+        35% {
+          opacity: 1;
+          transform: rotate(0deg) scaleY(1);
+        }
+        65% {
+          opacity: 0.08;
+          transform: rotate(-12deg) scaleY(0.45);
+        }
+        100% {
+          opacity: 1;
+          transform: rotate(0deg) scaleY(1);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .logo .slash { animation: none; }
+      }
+      .tagline { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .grid {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 1fr 360px 1fr;
+        gap: 12px;
+        padding: 12px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel-2);
+      }
+      .panel-head h2 { font-size: 13px; margin: 0; color: var(--muted); font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.04em; }
+
+      .code-area {
+        flex: 1;
+        width: 100%;
+        border: 0;
+        resize: none;
+        padding: 14px;
+        background: transparent;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.5;
+        tab-size: 2;
+      }
+      .code-area:focus { outline: none; }
+
+      .code-out {
+        margin: 0;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .code-out code { font-family: var(--mono); }
+
+      /* Controls */
+      .controls-scroll { overflow-y: auto; padding: 12px; }
+      .ctrl-group {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 12px 12px;
+        margin: 0 0 12px;
+      }
+      .ctrl-group legend {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        padding: 0 4px;
+      }
+      .caption { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+      .caption code { font-family: var(--mono); font-size: 11px; }
+
+      .segmented {
+        display: inline-flex;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 3px;
+        gap: 3px;
+      }
+      .segmented.small { font-size: 12px; }
+      .seg { position: relative; }
+      .seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+      .seg span {
+        display: block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--muted);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .seg input:checked + span {
+        background: var(--accent-2);
+        color: #fff;
+      }
+      .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+      .group-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+
+      .checkbox-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px 8px;
+      }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+      .check input { accent-color: var(--accent); }
+      .check span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .checkbox-grid .empty {
+        grid-column: 1 / -1;
+        margin: 2px 0;
+        font-size: 12px;
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      /* Buttons */
+      .ghost-btn, .primary-btn {
+        font: inherit;
+        font-size: 12px;
+        border-radius: 6px;
+        padding: 5px 10px;
+        cursor: pointer;
+        border: 1px solid var(--border);
+      }
+      .ghost-btn { background: transparent; color: var(--muted); }
+      .ghost-btn:hover { color: var(--text); border-color: var(--accent); }
+      .primary-btn { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+      .primary-btn:hover { background: var(--accent); }
+      .primary-btn.ok { background: var(--ok); border-color: var(--ok); }
+
+      /* Output */
+      .output-body { flex: 1; min-height: 0; display: flex; }
+      .preview-frame {
+        flex: 1;
+        border: 0;
+        width: 100%;
+        background: #fff;
+      }
+
+      @media (max-width: 1000px) {
+        .grid { grid-template-columns: 1fr; grid-auto-rows: minmax(280px, auto); }
+      }
+    </style>
+  </body>
+</html>

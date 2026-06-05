@@ -1,0 +1,28 @@
+# Build output
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+pnpm-debug.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing & Coverage
+coverage/
+.vitest/
+
+# Cache & Temporary
+.cache/
+*.log
