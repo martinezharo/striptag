@@ -26,3 +26,7 @@ coverage/
 # Cache & Temporary
 .cache/
 *.log
+
+# Agents and AI-related
+.agents/
+.claude/
