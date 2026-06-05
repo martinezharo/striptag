@@ -2,6 +2,9 @@
 // Tag and attribute checkboxes are generated client-side from whatever the
 // pasted HTML actually contains (see the script below), so nothing is rendered
 // statically here.
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import '../styles/global.css';
 ---
 
 <!doctype html>
@@ -10,133 +13,308 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>StripTag — HTML Tag & Attribute Cleaner</title>
+    <title>StripTag — strip your HTML down to the essentials</title>
     <meta
       name="description"
-      content="Clean pasted HTML in your browser: remove or keep tags and attributes. Fully client-side, no upload."
+      content="Clean pasted HTML right in your browser: peel off the tags and attributes you don't want. 100% client-side — nothing leaves your machine."
     />
   </head>
   <body>
-    <header class="topbar">
-      <h1 class="logo">
-        <span class="mark" aria-hidden="true">&lt;<span class="slash">/</span>&gt;</span
-        >Strip<span class="wordmark">Tag</span>
-      </h1>
-      <p class="tagline">Clean HTML in your browser — nothing leaves your machine.</p>
-    </header>
-
-    <main class="grid">
-      <!-- ───────────── Left: source input ───────────── -->
-      <section class="panel input-panel">
-        <div class="panel-head">
-          <h2>Source HTML</h2>
-          <button id="load-sample" class="ghost-btn" type="button">Load sample</button>
+    <div class="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
+      <!-- ───────────── Top bar ───────────── -->
+      <header
+        class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border-soft px-5 py-3"
+      >
+        <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1
+            class="m-0 text-xl font-bold tracking-tight"
+            aria-label="StripTag"
+          >
+            <span class="font-mono font-bold" aria-hidden="true"
+              ><span class="text-blue">&lt;</span><span
+                class="slash animate-tease inline-block text-accent [text-shadow:0_0_12px_var(--color-accent)]"
+                style="transform-origin:50% 55%">/</span
+              ><span class="text-blue">&gt;</span></span
+            ><span class="ml-2">Strip<span class="text-accent">Tag</span></span>
+          </h1>
+          <p class="m-0 text-[13px] text-muted">
+            We undress your markup down to exactly what you want.
+          </p>
         </div>
-        <textarea
-          id="input"
-          class="code-area"
-          spellcheck="false"
-          placeholder="Paste your HTML here…"></textarea>
-      </section>
 
-      <!-- ───────────── Middle: controls ───────────── -->
-      <section class="panel controls-panel">
-        <div class="panel-head"><h2>Options</h2></div>
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full border border-border-soft bg-surface px-2.5 py-1 text-[11px] font-medium text-muted"
+          title="Everything runs locally in your browser. No uploads, ever."
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="text-ok"
+            aria-hidden="true"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          100% client-side · what happens here, stays here
+        </span>
+      </header>
 
-        <div class="controls-scroll">
-          <!-- Mode -->
-          <fieldset class="ctrl-group">
-            <legend>Mode</legend>
-            <div class="segmented" role="radiogroup" aria-label="Cleaning mode">
-              <label class="seg">
-                <input type="radio" name="mode" value="blacklist" checked />
-                <span>Blacklist</span>
-              </label>
-              <label class="seg">
-                <input type="radio" name="mode" value="whitelist" />
-                <span>Whitelist</span>
-              </label>
-            </div>
-            <p id="mode-caption" class="caption">Removing the selected tags &amp; attributes.</p>
-          </fieldset>
-
-          <!-- Removed-tag behaviour -->
-          <fieldset class="ctrl-group">
-            <legend>When a tag is removed</legend>
-            <div class="segmented" role="radiogroup" aria-label="Tag removal behaviour">
-              <label class="seg">
-                <input type="radio" name="removal" value="unwrap" checked />
-                <span>Unwrap</span>
-              </label>
-              <label class="seg">
-                <input type="radio" name="removal" value="remove" />
-                <span>Remove contents</span>
-              </label>
-            </div>
-            <p class="caption">Unwrap keeps inner content; Remove deletes the whole element.</p>
-          </fieldset>
-
-          <!-- Comments -->
-          <fieldset class="ctrl-group">
-            <legend>Comments</legend>
-            <label class="check">
-              <input type="checkbox" id="keep-comments" />
-              <span>Keep HTML comments</span>
-            </label>
-            <p class="caption">
-              <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code> and
-              <code>&lt;noscript&gt;</code> are always removed with their contents.
-            </p>
-          </fieldset>
-
-          <!-- Tags (auto-detected from the pasted HTML) -->
-          <fieldset class="ctrl-group">
-            <legend>Tags found</legend>
-            <div class="group-actions">
-              <button class="ghost-btn" type="button" data-all="tags">Select all</button>
-              <button class="ghost-btn" type="button" data-clear="tags">Clear</button>
-            </div>
-            <div class="checkbox-grid" id="tag-grid"></div>
-          </fieldset>
-
-          <!-- Attributes (auto-detected from the pasted HTML) -->
-          <fieldset class="ctrl-group">
-            <legend>Attributes found</legend>
-            <div class="group-actions">
-              <button class="ghost-btn" type="button" data-all="attrs">Select all</button>
-              <button class="ghost-btn" type="button" data-clear="attrs">Clear</button>
-            </div>
-            <div class="checkbox-grid" id="attr-grid"></div>
-          </fieldset>
-        </div>
-      </section>
-
-      <!-- ───────────── Right: output ───────────── -->
-      <section class="panel output-panel">
-        <div class="panel-head">
-          <div class="segmented small" role="radiogroup" aria-label="Output view">
-            <label class="seg">
-              <input type="radio" name="view" value="preview" checked />
-              <span>Preview</span>
-            </label>
-            <label class="seg">
-              <input type="radio" name="view" value="code" />
-              <span>Code</span>
-            </label>
+      <main
+        class="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 auto-rows-[minmax(300px,auto)] lg:auto-rows-[minmax(0,1fr)] lg:grid-cols-[1fr_360px_1fr] lg:overflow-hidden"
+      >
+        <!-- ───────────── Left: source input ───────────── -->
+        <section class="panel input-panel">
+          <div class="panel-head">
+            <span class="panel-title">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+              Source HTML
+            </span>
+            <button id="load-sample" class="ghost-btn" type="button">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 3v18M3 12h18"></path>
+              </svg>
+              Load sample
+            </button>
           </div>
-          <button id="copy-btn" class="primary-btn" type="button">Copy</button>
-        </div>
+          <textarea
+            id="input"
+            class="code-area"
+            spellcheck="false"
+            placeholder="Paste your messy HTML here and watch it lose a few layers…"
+          ></textarea>
+        </section>
 
-        <div class="output-body">
-          <iframe
-            id="preview"
-            class="preview-frame"
-            sandbox=""
-            title="Cleaned HTML preview"></iframe>
-          <pre id="code-view" class="code-area code-out" hidden><code></code></pre>
-        </div>
-      </section>
-    </main>
+        <!-- ───────────── Middle: controls ───────────── -->
+        <section class="panel controls-panel">
+          <div class="panel-head">
+            <span class="panel-title">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                ></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              Options
+            </span>
+          </div>
+
+          <div class="controls-scroll min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+            <!-- Mode -->
+            <fieldset class="ctrl-group">
+              <legend class="ctrl-legend">Mode</legend>
+              <div
+                class="segmented w-full"
+                role="radiogroup"
+                aria-label="Cleaning mode"
+              >
+                <label class="seg flex-1">
+                  <input type="radio" name="mode" value="blacklist" checked />
+                  <span class="text-center">Blacklist</span>
+                </label>
+                <label class="seg flex-1">
+                  <input type="radio" name="mode" value="whitelist" />
+                  <span class="text-center">Whitelist</span>
+                </label>
+              </div>
+              <p id="mode-caption" class="caption">
+                Stripping off the tags &amp; attributes you pick.
+              </p>
+            </fieldset>
+
+            <!-- Removed-tag behaviour -->
+            <fieldset class="ctrl-group">
+              <legend class="ctrl-legend">When a tag comes off</legend>
+              <div
+                class="segmented w-full"
+                role="radiogroup"
+                aria-label="Tag removal behaviour"
+              >
+                <label class="seg flex-1">
+                  <input type="radio" name="removal" value="unwrap" checked />
+                  <span class="text-center">Unwrap</span>
+                </label>
+                <label class="seg flex-1">
+                  <input type="radio" name="removal" value="remove" />
+                  <span class="text-center">Remove contents</span>
+                </label>
+              </div>
+              <p class="caption">
+                Unwrap keeps the inner content; Remove deletes the whole element.
+              </p>
+            </fieldset>
+
+            <!-- Comments -->
+            <fieldset class="ctrl-group">
+              <legend class="ctrl-legend">Comments</legend>
+              <label class="switch">
+                <input type="checkbox" id="keep-comments" />
+                <span class="track" aria-hidden="true"></span>
+                <span>Keep HTML comments</span>
+              </label>
+              <p class="caption">
+                <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code> and
+                <code>&lt;noscript&gt;</code> always come off, contents and all.
+              </p>
+            </fieldset>
+
+            <!-- Tags (auto-detected from the pasted HTML) -->
+            <fieldset class="ctrl-group">
+              <legend class="ctrl-legend">
+                Tags found
+                <span
+                  id="tag-count"
+                  class="rounded-full bg-inset px-1.5 py-0.5 font-mono text-[10px] text-blue"
+                  >0</span
+                >
+              </legend>
+              <div class="mb-2.5 flex gap-2">
+                <button class="ghost-btn" type="button" data-all="tags"
+                  >Select all</button
+                >
+                <button class="ghost-btn" type="button" data-clear="tags"
+                  >Clear</button
+                >
+              </div>
+              <div class="checkbox-grid" id="tag-grid"></div>
+            </fieldset>
+
+            <!-- Attributes (auto-detected from the pasted HTML) -->
+            <fieldset class="ctrl-group">
+              <legend class="ctrl-legend">
+                Attributes found
+                <span
+                  id="attr-count"
+                  class="rounded-full bg-inset px-1.5 py-0.5 font-mono text-[10px] text-blue"
+                  >0</span
+                >
+              </legend>
+              <div class="mb-2.5 flex gap-2">
+                <button class="ghost-btn" type="button" data-all="attrs"
+                  >Select all</button
+                >
+                <button class="ghost-btn" type="button" data-clear="attrs"
+                  >Clear</button
+                >
+              </div>
+              <div class="checkbox-grid" id="attr-grid"></div>
+            </fieldset>
+          </div>
+        </section>
+
+        <!-- ───────────── Right: output ───────────── -->
+        <section class="panel output-panel">
+          <div class="panel-head">
+            <div
+              class="segmented"
+              role="radiogroup"
+              aria-label="Output view"
+            >
+              <label class="seg">
+                <input type="radio" name="view" value="preview" checked />
+                <span>Preview</span>
+              </label>
+              <label class="seg">
+                <input type="radio" name="view" value="code" />
+                <span>Code</span>
+              </label>
+            </div>
+            <button id="copy-btn" class="primary-btn" type="button">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                ></path>
+              </svg>
+              <span id="copy-label">Copy</span>
+            </button>
+          </div>
+
+          <div class="output-body flex min-h-0 flex-1">
+            <iframe
+              id="preview"
+              class="preview-frame w-full flex-1 border-0 bg-white"
+              sandbox=""
+              title="Cleaned HTML preview"></iframe>
+            <pre
+              id="code-view"
+              class="code-area code-out"
+              hidden><code></code></pre>
+          </div>
+        </section>
+      </main>
+
+      <footer
+        class="flex flex-wrap items-center justify-end gap-2 px-5 py-2.5 text-[11px] text-faint"
+      >
+        <a
+          href="https://github.com/martinezharo/striptag"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 transition-colors hover:text-text"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.24-3.23-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.82 1.1.82 2.22 0 1.61-.02 2.9-.02 3.29 0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"
+            ></path>
+          </svg>
+          martinezharo/striptag
+        </a>
+      </footer>
+    </div>
 
     <script>
       import { cleanHtml, defaultOptions, extractTagsAndAttrs, type CleanOptions } from '../lib/cleaner';
@@ -151,10 +329,13 @@
       const modeCaption = $('#mode-caption');
       const tagGrid = $('#tag-grid');
       const attrGrid = $('#attr-grid');
+      const tagCount = $('#tag-count');
+      const attrCount = $('#attr-count');
       const preview = $<HTMLIFrameElement>('#preview');
       const codeView = $<HTMLPreElement>('#code-view');
       const codeEl = codeView.querySelector('code') as HTMLElement;
       const copyBtn = $<HTMLButtonElement>('#copy-btn');
+      const copyLabel = $('#copy-label');
 
       const radioValue = (name: string) =>
         ($(`input[name="${name}"]:checked`) as HTMLInputElement).value;
@@ -173,7 +354,7 @@
         if (items.length === 0) {
           const empty = document.createElement('p');
           empty.className = 'empty';
-          empty.textContent = 'Nothing detected yet.';
+          empty.textContent = 'Nothing to strip yet…';
           container.append(empty);
           return;
         }
@@ -201,6 +382,8 @@
       let lastAttrKey = '';
       function refreshDetected() {
         const { tags, attrs } = extractTagsAndAttrs(input.value);
+        tagCount.textContent = String(tags.length);
+        attrCount.textContent = String(attrs.length);
         const tagKey = tags.join(',');
         const attrKey = attrs.join(',');
         if (tagKey !== lastTagKey) {
@@ -250,8 +433,8 @@
       function updateModeCaption() {
         modeCaption.textContent =
           radioValue('mode') === 'blacklist'
-            ? 'Removing the selected tags & attributes.'
-            : 'Keeping only the selected tags & attributes.';
+            ? 'Stripping off the tags & attributes you pick.'
+            : 'Keeping only what you pick — the rest comes off.';
       }
 
       // ── Debounced input, immediate everything-else ─────────────────────
@@ -305,16 +488,15 @@
       copyBtn.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(lastCode);
-          const original = copyBtn.textContent;
-          copyBtn.textContent = 'Copied!';
+          copyLabel.textContent = 'Copied 😏';
           copyBtn.classList.add('ok');
           window.setTimeout(() => {
-            copyBtn.textContent = original;
+            copyLabel.textContent = 'Copy';
             copyBtn.classList.remove('ok');
           }, 1200);
         } catch {
-          copyBtn.textContent = 'Copy failed';
-          window.setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
+          copyLabel.textContent = 'Copy failed';
+          window.setTimeout(() => (copyLabel.textContent = 'Copy'), 1200);
         }
       });
 
@@ -336,225 +518,5 @@
       updateModeCaption();
       render();
     </script>
-
-    <style>
-      :root {
-        --bg: #0f1115;
-        --panel: #171a21;
-        --panel-2: #1d212b;
-        --border: #2a2f3a;
-        --text: #e6e9ef;
-        --muted: #9aa3b2;
-        --accent: #5b8cff;
-        --accent-2: #3a6df0;
-        --ok: #34c759;
-        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-          "Liberation Mono", monospace;
-        --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
-          sans-serif;
-      }
-
-      * { box-sizing: border-box; }
-
-      html, body { height: 100%; }
-
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--text);
-        font-family: var(--sans);
-        display: flex;
-        flex-direction: column;
-      }
-
-      .topbar {
-        padding: 14px 20px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: baseline;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-      .logo { font-size: 20px; margin: 0; letter-spacing: -0.02em; }
-      .logo .wordmark { color: var(--accent); }
-
-      /* The </> brand mark; chevrons stay solid, the middle slash teases. */
-      .logo .mark {
-        font-family: var(--mono);
-        font-weight: 700;
-        color: var(--accent);
-        margin-right: 9px;
-      }
-      .logo .slash {
-        display: inline-block;
-        transform-origin: 50% 55%;
-        animation: tease 1.8s ease-in-out infinite;
-      }
-
-      /* A teasing peel-away: the slash fades, leans and shrinks, then returns. */
-      @keyframes tease {
-        0%,
-        35% {
-          opacity: 1;
-          transform: rotate(0deg) scaleY(1);
-        }
-        65% {
-          opacity: 0.08;
-          transform: rotate(-12deg) scaleY(0.45);
-        }
-        100% {
-          opacity: 1;
-          transform: rotate(0deg) scaleY(1);
-        }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .logo .slash { animation: none; }
-      }
-      .tagline { margin: 0; color: var(--muted); font-size: 13px; }
-
-      .grid {
-        flex: 1;
-        min-height: 0;
-        display: grid;
-        grid-template-columns: 1fr 360px 1fr;
-        gap: 12px;
-        padding: 12px;
-      }
-
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        overflow: hidden;
-      }
-
-      .panel-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 10px 12px;
-        border-bottom: 1px solid var(--border);
-        background: var(--panel-2);
-      }
-      .panel-head h2 { font-size: 13px; margin: 0; color: var(--muted); font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.04em; }
-
-      .code-area {
-        flex: 1;
-        width: 100%;
-        border: 0;
-        resize: none;
-        padding: 14px;
-        background: transparent;
-        color: var(--text);
-        font-family: var(--mono);
-        font-size: 13px;
-        line-height: 1.5;
-        tab-size: 2;
-      }
-      .code-area:focus { outline: none; }
-
-      .code-out {
-        margin: 0;
-        overflow: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      .code-out code { font-family: var(--mono); }
-
-      /* Controls */
-      .controls-scroll { overflow-y: auto; padding: 12px; }
-      .ctrl-group {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 10px 12px 12px;
-        margin: 0 0 12px;
-      }
-      .ctrl-group legend {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--muted);
-        padding: 0 4px;
-      }
-      .caption { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
-      .caption code { font-family: var(--mono); font-size: 11px; }
-
-      .segmented {
-        display: inline-flex;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 3px;
-        gap: 3px;
-      }
-      .segmented.small { font-size: 12px; }
-      .seg { position: relative; }
-      .seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
-      .seg span {
-        display: block;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 13px;
-        color: var(--muted);
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .seg input:checked + span {
-        background: var(--accent-2);
-        color: #fff;
-      }
-      .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-      .group-actions { display: flex; gap: 8px; margin-bottom: 8px; }
-
-      .checkbox-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 4px 8px;
-      }
-      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
-      .check input { accent-color: var(--accent); }
-      .check span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .checkbox-grid .empty {
-        grid-column: 1 / -1;
-        margin: 2px 0;
-        font-size: 12px;
-        color: var(--muted);
-        font-style: italic;
-      }
-
-      /* Buttons */
-      .ghost-btn, .primary-btn {
-        font: inherit;
-        font-size: 12px;
-        border-radius: 6px;
-        padding: 5px 10px;
-        cursor: pointer;
-        border: 1px solid var(--border);
-      }
-      .ghost-btn { background: transparent; color: var(--muted); }
-      .ghost-btn:hover { color: var(--text); border-color: var(--accent); }
-      .primary-btn { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
-      .primary-btn:hover { background: var(--accent); }
-      .primary-btn.ok { background: var(--ok); border-color: var(--ok); }
-
-      /* Output */
-      .output-body { flex: 1; min-height: 0; display: flex; }
-      .preview-frame {
-        flex: 1;
-        border: 0;
-        width: 100%;
-        background: #fff;
-      }
-
-      @media (max-width: 1000px) {
-        .grid { grid-template-columns: 1fr; grid-auto-rows: minmax(280px, auto); }
-      }
-    </style>
   </body>
 </html>

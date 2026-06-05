@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.9" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="1" y="1" width="30" height="30" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1" />
+  <g fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- chevrons in dev blue -->
+    <path d="M12 10 L7 16 L12 22" stroke="#58a6ff" />
+    <path d="M20 10 L25 16 L20 22" stroke="#58a6ff" />
+    <!-- the teasing slash in neon pink -->
+    <path d="M18.5 9 L13.5 23" stroke="#ff5d8f" filter="url(#glow)" />
+  </g>
+</svg>
