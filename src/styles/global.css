@@ -183,7 +183,7 @@
     @apply text-text;
   }
   .seg input:checked + span {
-    @apply text-white;
+    @apply text-bg;
     background: linear-gradient(
       180deg,
       var(--color-accent-hover),
@@ -203,7 +203,7 @@
     @apply border-accent/60 text-text;
   }
   .primary-btn {
-    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-transparent px-3.5 py-1.5 text-xs font-semibold text-white transition-all;
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-transparent px-3.5 py-1.5 text-xs font-semibold text-bg transition-all;
     background: linear-gradient(
       180deg,
       var(--color-accent-hover),
@@ -246,7 +246,7 @@
     );
   }
   .switch input:checked + .track::after {
-    @apply translate-x-4 bg-white;
+    @apply translate-x-4 bg-bg;
   }
   .switch input:focus-visible + .track {
     @apply outline-2 outline-offset-2 outline-accent;
@@ -270,7 +270,7 @@
   }
   /* checked = "marked for action" → light it up in pink */
   .check:has(input:checked) {
-    @apply border-transparent text-white;
+    @apply border-transparent text-bg;
     background: linear-gradient(
       180deg,
       var(--color-accent-hover),
