@@ -79,3 +79,13 @@ cleanHtml(input: string, opts: CleanOptions, parser?: DOMParser): string
 `pnpm build` emits a static site to `dist/` that can be hosted on any static
 host (GitHub Pages, Cloudflare Pages, Netlify, etc.) — there is no server
 component.
+
+## License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">
+  Made with ❤️ by <strong><a href="https://olivermartinezharo.com">Oli</a></strong>
+</p>
