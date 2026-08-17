@@ -1,91 +1,38 @@
 # StripTag
 
-A single-page web app that **cleans pasted HTML** — removing or keeping the tags
-and attributes you choose. It runs **entirely in your browser** (no backend, no
-uploads) and is built with [Astro](https://astro.build/) so it deploys as a fully
-static site.
+StripTag cleans pasted HTML in the browser. It parses with the native
+`DOMParser`, applies tag and attribute rules to the parsed DOM, and returns
+cleaned HTML; there is no backend or upload.
 
-Parsing uses the browser's native `DOMParser` (never regex); every transformation
-runs on the parsed DOM and is serialized back to a string.
+## Capabilities
 
-## Features
+- Blacklist mode removes selected tags and attributes; whitelist mode keeps only
+  the selected ones.
+- Removed tags can be unwrapped (keep their children) or removed with their
+  contents.
+- `<script>`, `<style>`, and `<noscript>` are always removed with their
+  contents. Comments are removed unless **Keep HTML comments** is enabled.
+- Tag and attribute controls are detected from the current input and update as
+  it changes; selections are retained across edits.
+- Debounced live output includes a sandboxed Preview with script execution
+  disabled and a Prettier-formatted Code view. Copy, Select all, Clear, and
+  Load sample actions are included.
 
-- **Two modes:**
-  - **Blacklist** (default) — remove the tags/attributes you select; keep the rest.
-  - **Whitelist** — keep only the tags/attributes you select; remove everything else.
-- **Tag removal behaviour:**
-  - **Unwrap** (default) — drop the tag but keep its inner content
-    (`<div>text</div>` → `text`).
-  - **Remove with contents** — delete the element and its whole subtree.
-- `<script>`, `<style>`, `<noscript>` and HTML comments are removed with their
-  contents by default (comments can be kept with a checkbox).
-- **Auto-detected checkboxes:** the tag and attribute lists are generated from the
-  tags and attributes actually present in the pasted HTML, and update live as you
-  edit — so you only ever see what's really in the document. Your selections are
-  preserved across edits.
-- **Live output** (debounced) with a Preview / Code toggle:
-  - **Preview** renders in a sandboxed `<iframe>` (no script execution).
-  - **Code** shows the cleaned HTML, pretty-printed with Prettier.
-- **Copy** button copies the cleaned HTML source.
-- **Select all / Clear** helpers for each checkbox group.
-- **Load sample** button drops in a small messy snippet to play with.
+## Development
 
-## Requirements
-
-- Node 20+ (developed on Node 24)
-- [pnpm](https://pnpm.io/)
-
-## Getting started
+Requires Node.js 22+ and pnpm. Wrangler, used by the preview and deploy
+scripts, requires Node.js 22 or newer.
 
 ```bash
 pnpm install
-pnpm dev          # start the dev server (http://localhost:4321)
+pnpm dev          # Astro development server
+pnpm check        # Astro and TypeScript checks
+pnpm test         # Vitest unit tests
+pnpm build        # production output in dist/
+pnpm preview      # build and run the Wrangler preview
+pnpm deploy       # build and deploy with Wrangler
 ```
 
-## Other scripts
-
-```bash
-pnpm build        # produce a static site in dist/
-pnpm preview      # preview the production build locally
-pnpm test         # run the unit tests (Vitest + happy-dom)
-pnpm check        # Astro/TypeScript type checking
-```
-
-## Project structure
-
-```
-src/
-├── lib/
-│   ├── constants.ts     # common tag/attribute lists + always-strip set
-│   ├── cleaner.ts       # core DOM cleaning logic (pure, reusable, tested)
-│   ├── cleaner.test.ts  # unit tests for the cleaning logic
-│   └── format.ts        # Prettier wrapper for the Code view
-├── pages/
-│   └── index.astro      # layout, scoped styles, and client-side wiring
-└── styles/
-    └── global.css       # Tailwind v4 design tokens + component classes
-```
-
-The cleaning logic in `src/lib/cleaner.ts` is intentionally decoupled from the
-page markup, so it can be unit-tested headlessly and reused elsewhere. Its entry
-point is:
-
-```ts
-cleanHtml(input: string, opts: CleanOptions, parser?: DOMParser): string
-```
-
-## Deployment
-
-`pnpm build` emits a static site to `dist/` that can be hosted on any static
-host (GitHub Pages, Cloudflare Pages, Netlify, etc.) — there is no server
-component.
-
-## License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-<p align="center">
-  Made with ❤️ by <strong><a href="https://olivermartinezharo.com">Oli</a></strong>
-</p>
+The reusable cleaner is [`cleanHtml`](src/lib/cleaner.ts), with tests in
+[`src/lib/cleaner.test.ts`](src/lib/cleaner.test.ts). Cloudflare deployment is
+configured in [`wrangler.jsonc`](wrangler.jsonc).
